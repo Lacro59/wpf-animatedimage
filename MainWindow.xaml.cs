@@ -1,6 +1,7 @@
 ﻿using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Text;
@@ -43,6 +44,11 @@ namespace wpf_animatedimage
                 PART_Frames.Content = info.Frames;
                 PART_Delay.Content = info.Delay;
             }
+        }
+
+        private void ToggleButton_Click(object sender, RoutedEventArgs e)
+        {
+            PART_AnimatedImage.UseBitmapImage = !PART_AnimatedImage.UseBitmapImage;
         }
     }
 }

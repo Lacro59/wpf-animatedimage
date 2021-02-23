@@ -41,6 +41,9 @@ namespace wpf_animatedimage.Controls
         private int ActualFrame = 0;
 
 
+        public static readonly DependencyProperty UseBitmapImageProperty;
+        public bool UseBitmapImage { get; set; } = true;
+
         public new object Source
         {
             get { return GetValue(SourceProperty); }
@@ -207,29 +210,36 @@ namespace wpf_animatedimage.Controls
             try
             {
 #if DEBUG
-                System.Diagnostics.Debug.WriteLine("--------------------------");
+                System.Diagnostics.Debug.WriteLine("-TimerTickWebp-------------------------");
                 System.Diagnostics.Debug.WriteLine(DateTime.Now.Ticks / (decimal)TimeSpan.TicksPerMillisecond);
 #endif
-                //stream = webPAnim.GetFrameStream(ActualFrame);
-                //
-                //System.Diagnostics.Debug.WriteLine(DateTime.Now.Ticks / (decimal)TimeSpan.TicksPerMillisecond);//30
-                //
-                //bitmapImage = new BitmapImage();
-                //bitmapImage.BeginInit();
-                //bitmapImage.StreamSource = stream;
-                //bitmapImage.DecodePixelWidth = (int)this.ActualWidth;
-                //bitmapImage.EndInit();
+                if (UseBitmapImage)
+                {
+                    stream = webPAnim.GetFrameStream(ActualFrame);
 
-                bitmapSource = webPAnim.GetFrameBitmapSource(ActualFrame);
+                    System.Diagnostics.Debug.WriteLine(DateTime.Now.Ticks / (decimal)TimeSpan.TicksPerMillisecond);//30ms
+
+                    bitmapImage = new BitmapImage();
+                    bitmapImage.BeginInit();
+                    bitmapImage.StreamSource = stream;
+                    bitmapImage.DecodePixelWidth = (int)this.ActualWidth;
+                    bitmapImage.EndInit();
+
+                    base.Source = bitmapImage;
+                }
+                else
+                {
+                    bitmapSource = webPAnim.GetFrameBitmapSource(ActualFrame);
 
 #if DEBUG
-                System.Diagnostics.Debug.WriteLine(DateTime.Now.Ticks / (decimal)TimeSpan.TicksPerMillisecond);//3
+                    System.Diagnostics.Debug.WriteLine(DateTime.Now.Ticks / (decimal)TimeSpan.TicksPerMillisecond);//3ms
 #endif
 
-                base.Source = bitmapSource;
-
+                    base.Source = bitmapSource;
+                }
 #if DEBUG
-                System.Diagnostics.Debug.WriteLine(DateTime.Now.Ticks / (decimal)TimeSpan.TicksPerMillisecond);//1
+                System.Diagnostics.Debug.WriteLine(DateTime.Now.Ticks / (decimal)TimeSpan.TicksPerMillisecond);//1ms
+                System.Diagnostics.Debug.WriteLine("-TimerTickWebp-END---------------------");
 #endif
 
                 ActualFrame++; 

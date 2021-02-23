@@ -295,8 +295,7 @@ namespace wpf_animatedimage
         public Stream GetFrameStream(int frame)
         {
 #if DEBUG
-            System.Diagnostics.Debug.WriteLine("--------------------------");
-            System.Diagnostics.Debug.WriteLine("--------------------------");
+            System.Diagnostics.Debug.WriteLine("-GetFrameStream-------------------------");
             System.Diagnostics.Debug.WriteLine(DateTime.Now.Ticks / (decimal)TimeSpan.TicksPerMillisecond);
 #endif
 
@@ -326,7 +325,7 @@ namespace wpf_animatedimage
             bitmap = Webp.Decode(webpInfos[frame].RawWebp);
 
 #if DEBUG
-            System.Diagnostics.Debug.WriteLine(DateTime.Now.Ticks / (decimal)TimeSpan.TicksPerMillisecond);//6
+            System.Diagnostics.Debug.WriteLine(DateTime.Now.Ticks / (decimal)TimeSpan.TicksPerMillisecond);//6ms
 #endif
 
             Stream WebpImage;
@@ -336,7 +335,7 @@ namespace wpf_animatedimage
             }
 
 #if DEBUG
-            System.Diagnostics.Debug.WriteLine(DateTime.Now.Ticks / (decimal)TimeSpan.TicksPerMillisecond);//8
+            System.Diagnostics.Debug.WriteLine(DateTime.Now.Ticks / (decimal)TimeSpan.TicksPerMillisecond);//8ms
 #endif
 
             bitmap.Save(memoryStream, ImageFormat.Png);
@@ -345,9 +344,8 @@ namespace wpf_animatedimage
             BackImage = bitmap;
 
 #if DEBUG
-            System.Diagnostics.Debug.WriteLine(DateTime.Now.Ticks / (decimal)TimeSpan.TicksPerMillisecond);//20
-            System.Diagnostics.Debug.WriteLine("--------------------------");
-            System.Diagnostics.Debug.WriteLine("--------------------------");
+            System.Diagnostics.Debug.WriteLine(DateTime.Now.Ticks / (decimal)TimeSpan.TicksPerMillisecond);//20ms
+            System.Diagnostics.Debug.WriteLine("-GetFrameStream-END---------------------");
 #endif
 
             return WebpImage;
@@ -356,8 +354,7 @@ namespace wpf_animatedimage
         public BitmapSource GetFrameBitmapSource(int frame)
         {
 #if DEBUG
-            System.Diagnostics.Debug.WriteLine("--------------------------");
-            System.Diagnostics.Debug.WriteLine("--------------------------");
+            System.Diagnostics.Debug.WriteLine("-GetFrameBitmapSource-------------------------");
             System.Diagnostics.Debug.WriteLine(DateTime.Now.Ticks / (decimal)TimeSpan.TicksPerMillisecond);
 #endif
 
@@ -387,7 +384,7 @@ namespace wpf_animatedimage
             bitmap = Webp.Decode(webpInfos[frame].RawWebp);
 
 #if DEBUG
-            System.Diagnostics.Debug.WriteLine(DateTime.Now.Ticks / (decimal)TimeSpan.TicksPerMillisecond);//6
+            System.Diagnostics.Debug.WriteLine(DateTime.Now.Ticks / (decimal)TimeSpan.TicksPerMillisecond);//6ms
 #endif
 
             BitmapSource WebpImage;
@@ -397,7 +394,7 @@ namespace wpf_animatedimage
             }
 
 #if DEBUG
-            System.Diagnostics.Debug.WriteLine(DateTime.Now.Ticks / (decimal)TimeSpan.TicksPerMillisecond);//8
+            System.Diagnostics.Debug.WriteLine(DateTime.Now.Ticks / (decimal)TimeSpan.TicksPerMillisecond);//8ms
 #endif
 
             WebpImage = LoadBitmap(bitmap);
@@ -405,15 +402,12 @@ namespace wpf_animatedimage
             BackImage = bitmap;
 
 #if DEBUG
-            System.Diagnostics.Debug.WriteLine(DateTime.Now.Ticks / (decimal)TimeSpan.TicksPerMillisecond);//20
-            System.Diagnostics.Debug.WriteLine("--------------------------");
-            System.Diagnostics.Debug.WriteLine("--------------------------");
+            System.Diagnostics.Debug.WriteLine(DateTime.Now.Ticks / (decimal)TimeSpan.TicksPerMillisecond);//4ms
+            System.Diagnostics.Debug.WriteLine("-GetFrameBitmapSource-END---------------------");
 #endif
 
             return WebpImage;
         }
-
-
 
 
         public int FramesCount()
@@ -466,36 +460,6 @@ namespace wpf_animatedimage
                 bitmap.Dispose();
             }
             bitmap = null;
-        }
-
-
-
-        private Bitmap GenerateImageBitmap(Bitmap frontImage, Bitmap backImage, int x = 0, int y = 0)
-        {
-            int targetHeight = backImage.Height;
-            int targetWidth = backImage.Width;
-
-            //be sure to use a pixelformat that supports transparency
-            bitmap = new Bitmap(targetWidth, targetHeight, PixelFormat.Format32bppArgb);
-
-            canvas = Graphics.FromImage(bitmap);
-
-            //this ensures that the backgroundcolor is transparent
-            canvas.Clear(Color.Transparent);
-
-            //this selects the entire backimage and and paints
-            //it on the new image in the same size, so its not distorted.
-            canvas.DrawImage(backImage,
-                        new Rectangle(0, 0, backImage.Width, backImage.Height),
-                        new Rectangle(0, 0, backImage.Width, backImage.Height),
-                        GraphicsUnit.Pixel);
-
-            //this paints the frontimage with a offset at the given coordinates
-            canvas.DrawImage(frontImage, x, y, frontImage.Width, frontImage.Height);
-
-            canvas.Save();
-
-            return bitmap;
         }
 
 
@@ -634,7 +598,7 @@ namespace wpf_animatedimage
             BitmapSource bs = null;
             try
             {
-                bs = System.Windows.Interop.Imaging.CreateBitmapSourceFromHBitmap(ip,
+                   bs = System.Windows.Interop.Imaging.CreateBitmapSourceFromHBitmap(ip,
                    IntPtr.Zero, Int32Rect.Empty,
                    System.Windows.Media.Imaging.BitmapSizeOptions.FromEmptyOptions());
             }
