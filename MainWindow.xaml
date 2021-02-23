@@ -4,9 +4,13 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:wpf_animatedimage"
-        mc:Ignorable="d"
+        xmlns:controls="clr-namespace:wpf_animatedimage.Controls"
+        mc:Ignorable="d" 
         Title="MainWindow" Height="450" Width="800">
+    
     <Grid>
-        
+        <!--controls:AnimatedImage Source="H:\GitHub\oven425\APNG\WPF_APNG\apng_spinfox.png" /-->
+        <!--controls:AnimatedImage Source="H:\GitHub\Lacro59\wpf-animatedimage\Resources\b881c505ef54cac59dfdf61538693bd3.png" /-->
+        <controls:AnimatedImage Source="H:\GitHub\Lacro59\wpf-animatedimage\Resources\8dd3ff139b463dd3ee8b3933fd009aef.webp" />
     </Grid>
 </Window>
