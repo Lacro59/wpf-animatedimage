@@ -45,10 +45,5 @@ namespace wpf_animatedimage
                 PART_Delay.Content = info.Delay;
             }
         }
-
-        private void ToggleButton_Click(object sender, RoutedEventArgs e)
-        {
-            PART_AnimatedImage.UseBitmapImage = !PART_AnimatedImage.UseBitmapImage;
-        }
     }
 }

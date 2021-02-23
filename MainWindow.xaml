@@ -12,7 +12,7 @@
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*" />
             <ColumnDefinition Width="10" />
-            <ColumnDefinition Width="auto" />
+            <ColumnDefinition Width="200" />
         </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
             <RowDefinition Height="*" />
@@ -20,7 +20,9 @@
             <RowDefinition Height="auto" />
         </Grid.RowDefinitions>
 
-        <controls:AnimatedImage x:Name="PART_AnimatedImage" UseBitmapImage="True"
+        <controls:AnimatedImage x:Name="PART_AnimatedImage" 
+                                UseBitmapImage="{Binding ElementName=PART_Toggle, Path=IsChecked}" 
+                                DecodePixelWidth="{Binding RelativeSource={RelativeSource Self}, Path=ActualWidth}"
                                 Grid.Column="0" Grid.Row="0" Grid.RowSpan="3" />
 
         <Grid Grid.Column="2" Grid.Row="0">
@@ -28,10 +30,16 @@
                 <RowDefinition Height="auto" />
                 <RowDefinition Height="10" />
                 <RowDefinition Height="auto" />
+                <RowDefinition Height="10" />
+                <RowDefinition Height="auto" />
             </Grid.RowDefinitions>
             
             <Button Height="30" Click="Button_Click" Content="Load image" Grid.Row="0" />
-            <ToggleButton IsChecked="True" Height="30" Click="ToggleButton_Click" Content="Use BitmapImage for WebP" Grid.Row="2" />
+            <ToggleButton IsChecked="True" Height="30" Name="PART_Toggle"
+                          Content="Use BitmapImage for WebP" Grid.Row="2" />
+
+            <TextBlock Grid.Row="4" TextWrapping="Wrap"
+                       Text="Using BitmapImage for WebP decrease memory usage but animation is slower." />
         </Grid>
         
 

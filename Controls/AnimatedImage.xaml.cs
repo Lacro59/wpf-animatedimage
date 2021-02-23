@@ -41,8 +41,30 @@ namespace wpf_animatedimage.Controls
         private int ActualFrame = 0;
 
 
-        public static readonly DependencyProperty UseBitmapImageProperty;
-        public bool UseBitmapImage { get; set; } = true;
+        public bool UseBitmapImage
+        {
+            get { return (bool)GetValue(UseBitmapImageProperty); }
+            set { SetValue(UseBitmapImageProperty, value); }
+        }
+
+        public static readonly DependencyProperty UseBitmapImageProperty = DependencyProperty.Register(
+            nameof(UseBitmapImage),
+            typeof(bool),
+            typeof(AnimatedImage),
+            new PropertyMetadata(true));
+
+        public int DecodePixelWidth
+        {
+            get { return (int)GetValue(DecodePixelWidthProperty); }
+            set { SetValue(DecodePixelWidthProperty, value); }
+        }
+
+        public static readonly DependencyProperty DecodePixelWidthProperty = DependencyProperty.Register(
+            nameof(DecodePixelWidth),
+            typeof(int),
+            typeof(AnimatedImage),
+            new PropertyMetadata(0));
+
 
         public new object Source
         {
@@ -222,7 +244,14 @@ namespace wpf_animatedimage.Controls
                     bitmapImage = new BitmapImage();
                     bitmapImage.BeginInit();
                     bitmapImage.StreamSource = stream;
-                    bitmapImage.DecodePixelWidth = (int)this.ActualWidth;
+                    if (DecodePixelWidth != 0)
+                    {
+                        bitmapImage.DecodePixelWidth = DecodePixelWidth;
+                    }
+                    else
+                    {
+                        bitmapImage.DecodePixelWidth = (int)this.ActualWidth;
+                    }
                     bitmapImage.EndInit();
 
                     base.Source = bitmapImage;
