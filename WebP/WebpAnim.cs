@@ -31,12 +31,11 @@ namespace wpf_animatedimage
 
         private List<WebpInfo> webpInfos = new List<WebpInfo>();
 
-        private List<BitmapImage> bitmapImages = new List<BitmapImage>();
-
-        public List<Stream> StreamImages = new List<Stream>();
-
-        private Image backImage = null;
+        private Image BackImage = null;
         private MemoryStream memoryStream = new MemoryStream();
+
+        private Graphics canvas;
+        private Bitmap bitmap;
 
 
         public WebpAnim()
@@ -53,22 +52,6 @@ namespace wpf_animatedimage
             this.FilePath = FilePath;
             this.RawWebpAnim = ReadFileAsBytesSafe(FilePath);
             this.webpInfos = GetWebpInfo();
-
-            /*
-            bitmapImages = new List<BitmapImage>();
-            for (int i = 0; i < FramesCount(); i++)
-            {
-                bitmapImages.Add(MainWindow.BitmapFromStream(GetFramesStream()));
-            }
-            */
-
-            /*
-            StreamImages = new List<Stream>();
-            for (int i = 0; i < FramesCount(); i++)
-            {
-                StreamImages.Add(GetFramesStream());
-            }
-            */
         }
 
 
@@ -211,7 +194,7 @@ namespace wpf_animatedimage
                     }
 
 
-                    if (Line.Contains("Chunk VP8  at offset"))
+                    if (Line.Contains("Chunk VP8  at offset") || Line.Contains("Chunk VP8L at offset"))
                     {
                         match = Regex.Match(Line.Trim(), @"\boffset[ ]*\b(\d*),[ ]*\blength[ ]*\b(\d*)");
                         int.TryParse(match.Groups[1].Value, out Offset);
@@ -285,154 +268,38 @@ namespace wpf_animatedimage
         }
 
 
-        public BitmapImage GetFramesBitmapImage()
+
+
+        public Stream GetStream()
         {
-            if (FrameActual >= FramesCount())
-            {
-                FrameActual = 0;
-            }
+            memoryStream = new MemoryStream();
+            memoryStream.Position = 0;
 
-            //BitmapImage WebpImage = bitmapImages[FrameActual];
-            //FrameActual++;
-
-            BitmapImage WebpImage = null;
-
-            //WebpImage = MainWindow.BitmapFromStream(GetFramesStream());
-
-
-            return WebpImage;
-        }
-
-        public Stream GetFramesStream()
-        {
-            if (FrameActual >= FramesCount())
-            {
-                FrameActual = 0;
-            }
-
-            Stream WebpImage = GetFrameRawStream(FrameActual);
-            if (WebpImage == null)
-            {
-                return null;
-            }
-
-            WebpImage.Position = 0;
-
-            if (backImage != null)
-            {
-                WebpImage = GenerateImage(Image.FromStream(WebpImage), webpInfos[FrameActual].Anmf.Offset_X, webpInfos[FrameActual].Anmf.Offset_Y);
-                WebpImage.Position = 0;
-            }
-            backImage = Image.FromStream(WebpImage);
-
-            FrameActual++;
-
-            return WebpImage;
-        }
-
-        public BitmapSource GetFramesBitmapSource()
-        {
-            if (FrameActual >= FramesCount())
-            {
-                FrameActual = 0;
-            }
-
-            //BitmapImage bitmapImage = MainWindow.BitmapFromStream(StreamImages[FrameActual]);
-            FrameActual++;
-            return null;
-
-
-            /*
-            Bitmap bitmap = GetFrameRawBitmap(FrameActual);
-            if (bitmap == null)
-                throw new ArgumentNullException("bitmap");
-
-            IntPtr hBitmap = bitmap.GetHbitmap();
-
-            FrameActual++;
-
-            try
-            {
-                return System.Windows.Interop.Imaging.CreateBitmapSourceFromHBitmap(
-                    hBitmap,
-                    IntPtr.Zero,
-                    Int32Rect.Empty,
-                    BitmapSizeOptions.FromEmptyOptions()
-                );
-            }
-            finally
-            {
-                //DeleteObject(hBitmap);
-            }
-            */
-        }
-
-        public Stream GetFramesRawStream()
-        {
-            if (FrameActual >= FramesCount())
-            {
-                FrameActual = 0;
-            }
-
-            Stream WebpImage = GetFrameRawStream(FrameActual);
-            FrameActual++;
-
-            return WebpImage;
-        }
-
-
-        public Bitmap GetFrameRawBitmap(int frame)
-        {
             if (FramesCount() == 0)
             {
                 if (File.Exists(FilePath))
                 {
-                    return Webp.Decode(RawWebpAnim);
-                }
-            }
-
-            if (frame >= FramesCount())
-            {
-                return null;
-            }
-            if (frame < 0)
-            {
-                return null;
-            }
-
-            return Webp.Decode(webpInfos[frame].RawWebp);
-        }
-
-        public Stream GetFrameRawStream(int frame)
-        {
-            if (FramesCount() == 0)
-            {
-                if (File.Exists(FilePath))
-                {
-                    memoryStream = new MemoryStream();
-                    memoryStream.Position = 0;
                     Webp.Decode(RawWebpAnim).Save(memoryStream, ImageFormat.Png);
                     return memoryStream;
                 }
             }
-
-            if (frame >= FramesCount())
+            else
             {
-                return null;
-            }
-            if (frame < 0)
-            {
-                return null;
+                Webp.Decode(webpInfos[0].RawWebp).Save(memoryStream, ImageFormat.Png);
+                return memoryStream;
             }
 
-            memoryStream = new MemoryStream();
-            memoryStream.Position = 0;
-            Webp.Decode(webpInfos[frame].RawWebp).Save(memoryStream, ImageFormat.Png);
-            return memoryStream;
+            return null;
         }
 
         public Stream GetFrameStream(int frame)
         {
+#if DEBUG
+            System.Diagnostics.Debug.WriteLine("--------------------------");
+            System.Diagnostics.Debug.WriteLine("--------------------------");
+            System.Diagnostics.Debug.WriteLine(DateTime.Now.Ticks / (decimal)TimeSpan.TicksPerMillisecond);
+#endif
+
             if (FramesCount() == 0)
             {
                 if (File.Exists(FilePath))
@@ -455,16 +322,93 @@ namespace wpf_animatedimage
 
             memoryStream = new MemoryStream();
             memoryStream.Position = 0;
-            Webp.Decode(webpInfos[frame].RawWebp).Save(memoryStream, ImageFormat.Png);
 
+            bitmap = Webp.Decode(webpInfos[frame].RawWebp);
 
-            Stream WebpImage = memoryStream;
-            if (backImage != null)
+#if DEBUG
+            System.Diagnostics.Debug.WriteLine(DateTime.Now.Ticks / (decimal)TimeSpan.TicksPerMillisecond);//6
+#endif
+
+            Stream WebpImage;
+            if (BackImage != null)
             {
-                WebpImage = GenerateImage(Image.FromStream(memoryStream), webpInfos[frame].Anmf.Offset_X, webpInfos[frame].Anmf.Offset_Y);
-                WebpImage.Position = 0;
+                bitmap = GenerateImageBitmap(bitmap, webpInfos[frame].Anmf.Offset_X, webpInfos[frame].Anmf.Offset_Y);
             }
-            backImage = Image.FromStream(WebpImage);
+
+#if DEBUG
+            System.Diagnostics.Debug.WriteLine(DateTime.Now.Ticks / (decimal)TimeSpan.TicksPerMillisecond);//8
+#endif
+
+            bitmap.Save(memoryStream, ImageFormat.Png);
+            WebpImage = memoryStream;
+
+            BackImage = bitmap;
+
+#if DEBUG
+            System.Diagnostics.Debug.WriteLine(DateTime.Now.Ticks / (decimal)TimeSpan.TicksPerMillisecond);//20
+            System.Diagnostics.Debug.WriteLine("--------------------------");
+            System.Diagnostics.Debug.WriteLine("--------------------------");
+#endif
+
+            return WebpImage;
+        }
+
+        public BitmapSource GetFrameBitmapSource(int frame)
+        {
+#if DEBUG
+            System.Diagnostics.Debug.WriteLine("--------------------------");
+            System.Diagnostics.Debug.WriteLine("--------------------------");
+            System.Diagnostics.Debug.WriteLine(DateTime.Now.Ticks / (decimal)TimeSpan.TicksPerMillisecond);
+#endif
+
+            if (FramesCount() == 0)
+            {
+                if (File.Exists(FilePath))
+                {
+                    memoryStream = new MemoryStream();
+                    memoryStream.Position = 0;
+                    bitmap = Webp.Decode(RawWebpAnim);
+                    return LoadBitmap(bitmap);
+                }
+            }
+
+            if (frame >= FramesCount())
+            {
+                return null;
+            }
+            if (frame < 0)
+            {
+                return null;
+            }
+
+            memoryStream = new MemoryStream();
+            memoryStream.Position = 0;
+
+            bitmap = Webp.Decode(webpInfos[frame].RawWebp);
+
+#if DEBUG
+            System.Diagnostics.Debug.WriteLine(DateTime.Now.Ticks / (decimal)TimeSpan.TicksPerMillisecond);//6
+#endif
+
+            BitmapSource WebpImage;
+            if (BackImage != null)
+            {
+                bitmap = GenerateImageBitmap(bitmap, webpInfos[frame].Anmf.Offset_X, webpInfos[frame].Anmf.Offset_Y);
+            }
+
+#if DEBUG
+            System.Diagnostics.Debug.WriteLine(DateTime.Now.Ticks / (decimal)TimeSpan.TicksPerMillisecond);//8
+#endif
+
+            WebpImage = LoadBitmap(bitmap);
+
+            BackImage = bitmap;
+
+#if DEBUG
+            System.Diagnostics.Debug.WriteLine(DateTime.Now.Ticks / (decimal)TimeSpan.TicksPerMillisecond);//20
+            System.Diagnostics.Debug.WriteLine("--------------------------");
+            System.Diagnostics.Debug.WriteLine("--------------------------");
+#endif
 
             return WebpImage;
         }
@@ -487,49 +431,111 @@ namespace wpf_animatedimage
         }
 
 
-
-
         public void Dispose()
         {
+            if (memoryStream != null)
+            {
+                memoryStream.Dispose();
+            }
             memoryStream = null;
+
             RawWebpAnim = null;
+
+            if (Webp != null)
+            {
+                Webp.Dispose();
+            }
             Webp = null;
+
             webpInfos = null;
-            backImage = null;
+
+            if (BackImage != null)
+            {
+                BackImage.Dispose();
+            }
+            BackImage = null;
+
+            if (canvas != null)
+            {
+                canvas.Dispose();
+            }
+            canvas = null;
+
+            if (bitmap != null)
+            {
+                bitmap.Dispose();
+            }
+            bitmap = null;
         }
 
 
 
-        private Stream GenerateImage(Image frontImage, int x = 0, int y = 0)
+        private Bitmap GenerateImageBitmap(Bitmap frontImage, Bitmap backImage, int x = 0, int y = 0)
         {
             int targetHeight = backImage.Height;
             int targetWidth = backImage.Width;
 
             //be sure to use a pixelformat that supports transparency
-            using (var bitmap = new Bitmap(targetWidth, targetHeight, PixelFormat.Format32bppArgb))
-            {
-                using (var canvas = Graphics.FromImage(bitmap))
-                {
-                    //this ensures that the backgroundcolor is transparent
-                    canvas.Clear(Color.Transparent);
+            bitmap = new Bitmap(targetWidth, targetHeight, PixelFormat.Format32bppArgb);
 
-                    //this selects the entire backimage and and paints
-                    //it on the new image in the same size, so its not distorted.
-                    canvas.DrawImage(backImage,
-                              new Rectangle(0, 0, backImage.Width, backImage.Height),
-                              new Rectangle(0, 0, backImage.Width, backImage.Height),
-                              GraphicsUnit.Pixel);
+            canvas = Graphics.FromImage(bitmap);
 
-                    //this paints the frontimage with a offset at the given coordinates
-                    canvas.DrawImage(frontImage, x, y, frontImage.Width, frontImage.Height);
+            //this ensures that the backgroundcolor is transparent
+            canvas.Clear(Color.Transparent);
 
-                    canvas.Save();
-                }
+            //this selects the entire backimage and and paints
+            //it on the new image in the same size, so its not distorted.
+            canvas.DrawImage(backImage,
+                        new Rectangle(0, 0, backImage.Width, backImage.Height),
+                        new Rectangle(0, 0, backImage.Width, backImage.Height),
+                        GraphicsUnit.Pixel);
 
-                memoryStream = new MemoryStream();
-                bitmap.Save(memoryStream, ImageFormat.Png);
-                return memoryStream;
-            }
+            //this paints the frontimage with a offset at the given coordinates
+            canvas.DrawImage(frontImage, x, y, frontImage.Width, frontImage.Height);
+
+            canvas.Save();
+
+            return bitmap;
+        }
+
+
+
+        private Bitmap GenerateImageBitmap(Image frontImage, int x = 0, int y = 0)
+        {
+            int targetHeight = BackImage.Height;
+            int targetWidth = BackImage.Width;
+
+            //be sure to use a pixelformat that supports transparency
+            bitmap = new Bitmap(targetWidth, targetHeight, PixelFormat.Format32bppArgb);
+
+            canvas = Graphics.FromImage(bitmap);
+
+            //this ensures that the backgroundcolor is transparent
+            canvas.Clear(Color.Transparent);
+
+            //this selects the entire backimage and and paints
+            //it on the new image in the same size, so its not distorted.
+            canvas.DrawImage(BackImage,
+                        new Rectangle(0, 0, BackImage.Width, BackImage.Height),
+                        new Rectangle(0, 0, BackImage.Width, BackImage.Height),
+                        GraphicsUnit.Pixel);
+
+            //this paints the frontimage with a offset at the given coordinates
+            canvas.DrawImage(frontImage, x, y, frontImage.Width, frontImage.Height);
+
+            canvas.Save();
+
+            return bitmap;
+        }
+
+        private Stream GenerateImageStream(Image frontImage, int x = 0, int y = 0)
+        {
+            bitmap = GenerateImageBitmap(frontImage, x, y);
+
+            memoryStream = new MemoryStream();
+            bitmap.Save(memoryStream, ImageFormat.Png);
+
+            return memoryStream;
         }
 
 
@@ -613,6 +619,31 @@ namespace wpf_animatedimage
             return "'" + filename +
                 ((string.IsNullOrEmpty(arguments)) ? string.Empty : " " + arguments) +
                 "'";
+        }
+
+
+
+
+
+        [DllImport("gdi32")]
+        static extern int DeleteObject(IntPtr o);
+
+        public static BitmapSource LoadBitmap(System.Drawing.Bitmap source)
+        {
+            IntPtr ip = source.GetHbitmap();
+            BitmapSource bs = null;
+            try
+            {
+                bs = System.Windows.Interop.Imaging.CreateBitmapSourceFromHBitmap(ip,
+                   IntPtr.Zero, Int32Rect.Empty,
+                   System.Windows.Media.Imaging.BitmapSizeOptions.FromEmptyOptions());
+            }
+            finally
+            {
+                DeleteObject(ip);
+            }
+
+            return bs;
         }
     }
 

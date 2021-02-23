@@ -1,5 +1,7 @@
-﻿using System;
+﻿using Microsoft.Win32;
+using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -23,6 +25,24 @@ namespace wpf_animatedimage
         public MainWindow()
         {
             InitializeComponent();
+        }
+
+        private void Button_Click(object sender, RoutedEventArgs e)
+        {
+            OpenFileDialog ofd = new OpenFileDialog();
+            ofd.ShowDialog();
+
+            if (ofd.FileName != null && ofd.FileName != string.Empty)
+            {
+                string fname = ofd.FileName;
+                PART_AnimatedImage.Source = fname;
+
+                var info = PART_AnimatedImage.GetInfos();
+                PART_Name.Content = info.Name;
+                PART_Size.Content = info.Size;
+                PART_Frames.Content = info.Frames;
+                PART_Delay.Content = info.Delay;
+            }
         }
     }
 }

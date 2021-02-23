@@ -8,9 +8,49 @@
         mc:Ignorable="d" 
         Title="MainWindow" Height="450" Width="800">
     
-    <Grid>
-        <!--controls:AnimatedImage Source="H:\GitHub\oven425\APNG\WPF_APNG\apng_spinfox.png" /-->
-        <!--controls:AnimatedImage Source="H:\GitHub\Lacro59\wpf-animatedimage\Resources\b881c505ef54cac59dfdf61538693bd3.png" /-->
-        <controls:AnimatedImage Source="H:\GitHub\Lacro59\wpf-animatedimage\Resources\8dd3ff139b463dd3ee8b3933fd009aef.webp" />
+    <Grid Margin="10">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="10" />
+            <ColumnDefinition Width="auto" />
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="10" />
+            <RowDefinition Height="auto" />
+        </Grid.RowDefinitions>
+
+        <controls:AnimatedImage x:Name="PART_AnimatedImage" Grid.Column="0" Grid.Row="0" Grid.RowSpan="3" />
+    
+        <Button Grid.Column="2" Grid.Row="0" Height="30" Click="Button_Click" Content="Load image" />
+
+        <Grid Grid.Column="2" Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="auto" />
+                <ColumnDefinition Width="10" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="auto" />
+                <RowDefinition Height="10" />
+                <RowDefinition Height="auto" />
+                <RowDefinition Height="10" />
+                <RowDefinition Height="auto" />
+                <RowDefinition Height="10" />
+                <RowDefinition Height="auto" />
+            </Grid.RowDefinitions>
+
+            <Label Content="Name" Grid.Column="0" Grid.Row="0" />
+            <Label Name="PART_Name" Grid.Column="2" Grid.Row="0" />
+
+            <Label Content="Size" Grid.Column="0" Grid.Row="2" />
+            <Label Name="PART_Size" Grid.Column="2" Grid.Row="2" />
+
+            <Label Content="Frames" Grid.Column="0" Grid.Row="4" />
+            <Label Name="PART_Frames" Grid.Column="2" Grid.Row="4" />
+
+            <Label Content="Delay" Grid.Column="0" Grid.Row="6" />
+            <Label Name="PART_Delay" Grid.Column="2" Grid.Row="6" />
+        </Grid>
     </Grid>
 </Window>
