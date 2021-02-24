@@ -38,11 +38,23 @@ namespace wpf_animatedimage
                 string fname = ofd.FileName;
                 PART_AnimatedImage.Source = fname;
 
-                var info = PART_AnimatedImage.GetInfos();
-                PART_Name.Content = info.Name;
-                PART_Size.Content = info.Size;
-                PART_Frames.Content = info.Frames;
-                PART_Delay.Content = info.Delay;
+                PART_Name.Content = string.Empty;
+                PART_Size.Content = string.Empty;
+                PART_Frames.Content = string.Empty;
+                PART_Delay.Content = string.Empty;
+
+                Task.Run(() =>
+                {
+                    var info = PART_AnimatedImage.GetInfos();
+
+                    this.Dispatcher.BeginInvoke((Action)delegate
+                    {
+                        PART_Name.Content = info.Name;
+                        PART_Size.Content = info.Size;
+                        PART_Frames.Content = info.Frames;
+                        PART_Delay.Content = info.Delay;
+                    });
+                });
             }
         }
     }

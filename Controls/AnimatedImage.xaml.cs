@@ -26,6 +26,8 @@ namespace wpf_animatedimage.Controls
     {
         public bool HasError = false;
 
+        private string FileName;
+
         // APng
         private Dictionary<fcTL, MemoryStream> m_Apng;
         // WebP
@@ -39,6 +41,8 @@ namespace wpf_animatedimage.Controls
         private int DelayDefault = 50;
         private int Delay = 0;
         private int ActualFrame = 0;
+
+        public bool IsLoaded = false;
 
 
         public bool UseBitmapImage
@@ -100,9 +104,11 @@ namespace wpf_animatedimage.Controls
 
             Image_Unloaded(null, null);
 
-            if (NewSource != null && NewSource is string str)
+            if (NewSource != null && NewSource is string)
             {
-                if (!File.Exists(str))
+                FileName = (string)NewSource;
+
+                if (!File.Exists(FileName))
                 {
                     base.Source = null;
                     return;
@@ -110,44 +116,62 @@ namespace wpf_animatedimage.Controls
 
                 try
                 {
-                    base.Source = new BitmapImage(new Uri((string)NewSource));
+                    BitmapImage bitmapImage = new BitmapImage(new Uri((string)NewSource));
+                    if (DecodePixelWidth != 0)
+                    {
+                        bitmapImage.DecodePixelWidth = DecodePixelWidth;
+                    }
+                    else
+                    {
+                        bitmapImage.DecodePixelWidth = (int)this.ActualWidth;
+                    }
+
+                    base.Source = bitmapImage;
                 }
                 catch (Exception ex)
                 {
                     base.Source = null;
                 }
 
-                if (System.IO.Path.GetExtension(str).ToLower().IndexOf("png") > -1)
+                if (System.IO.Path.GetExtension(FileName).ToLower().IndexOf("png") > -1)
                 {
                     CPng_Reader pngr;
                     try
                     {
-                        pngr = new CPng_Reader();
-                        m_Apng = pngr.Open(File.OpenRead(str)).SpltAPng();
-
-                        // Animated
-                        if (pngr.Chunks.Count != 0)
+                        var TaskPng = Task.Run(() => 
                         {
-                            Delay = m_Apng.FirstOrDefault().Key.Delay_Den;
+                            pngr = new CPng_Reader();
+                            m_Apng = pngr.Open(File.OpenRead(FileName)).SpltAPng();
 
-                            Timer = new DispatcherTimer(DispatcherPriority.Render);
-                            if (Delay > 0)
+                            // Animated
+                            if (pngr.Chunks.Count != 0)
                             {
-                                Timer.Interval = TimeSpan.FromMilliseconds(Delay);
+                                Delay = m_Apng.FirstOrDefault().Key.Delay_Den;
+
+                                this.Dispatcher.BeginInvoke((Action)delegate
+                                {
+                                    Timer = new DispatcherTimer(DispatcherPriority.Render);
+                                    if (Delay > 0)
+                                    {
+                                        Timer.Interval = TimeSpan.FromMilliseconds(Delay);
+                                    }
+                                    else
+                                    {
+                                        Timer.Interval = TimeSpan.FromMilliseconds(DelayDefault);
+                                    }
+
+                                    Timer.Tick += TimerTickAPng;
+                                    Timer.Start();
+                                });
                             }
                             else
                             {
-                                Timer.Interval = TimeSpan.FromMilliseconds(DelayDefault);
+                                m_Apng = null;
                             }
-                            Timer.Tick += TimerTickAPng;
-                            Timer.Start();
-                        }
-                        else
-                        {
-                            m_Apng = null;
-                        }
 
-                        pngr = null;
+                            pngr = null;
+                            IsLoaded = true;
+                        });
                     }
                     catch (Exception ex)
                     {
@@ -155,41 +179,58 @@ namespace wpf_animatedimage.Controls
                         m_Apng = null;
                     }
                 }
-
-                if (System.IO.Path.GetExtension(str).ToLower().IndexOf("webp") > -1)
+                else if (System.IO.Path.GetExtension(FileName).ToLower().IndexOf("webp") > -1)
                 {
-                    webPAnim = new WebpAnim();
-                    webPAnim.Load(str);
-
-                    // Animated
-                    if (webPAnim.FramesDuration() != 0)
+                    var TaskWebP = Task.Run(() =>
                     {
-                        Delay = webPAnim.FramesDuration();
+                        webPAnim = new WebpAnim();
+                        webPAnim.Load(FileName);
 
-                        Timer = new DispatcherTimer(DispatcherPriority.Render);
-                        Timer.Interval = TimeSpan.FromMilliseconds(webPAnim.FramesDuration());
-                        Timer.Tick += TimerTickWebp;
-                        Timer.Start();
-                    }
-                    else
-                    {
-                        Stream stream = webPAnim.GetStream();
-                        if (stream != null)
+                        // Animated
+                        if (webPAnim.FramesDuration() != 0)
                         {
-                            BitmapImage bitmapImage = new BitmapImage();
-                            bitmapImage = new BitmapImage();
-                            bitmapImage.BeginInit();
-                            bitmapImage.StreamSource = stream;
-                            bitmapImage.DecodePixelWidth = (int)this.ActualWidth;
-                            bitmapImage.EndInit();
+                            Delay = webPAnim.FramesDuration();
 
-                            base.Source = bitmapImage;
+                            this.Dispatcher.BeginInvoke((Action)delegate
+                            {
+                                Timer = new DispatcherTimer(DispatcherPriority.Render);
+                                Timer.Interval = TimeSpan.FromMilliseconds(webPAnim.FramesDuration());
+                                Timer.Tick += TimerTickWebp;
+                                Timer.Start();
+                            });
                         }
                         else
                         {
-                            base.Source = null;
+                            Stream stream = webPAnim.GetStream();
+                            if (stream != null)
+                            {
+                                BitmapImage bitmapImage = new BitmapImage();
+                                bitmapImage = new BitmapImage();
+                                bitmapImage.BeginInit();
+                                bitmapImage.StreamSource = stream;
+                                bitmapImage.DecodePixelWidth = (int)this.ActualWidth;
+                                bitmapImage.EndInit();
+
+                                this.Dispatcher.BeginInvoke((Action)delegate
+                                {
+                                    base.Source = bitmapImage;
+                                });
+                            }
+                            else
+                            {
+                                this.Dispatcher.BeginInvoke((Action)delegate
+                                {
+                                    base.Source = null;
+                                });
+                            }
                         }
-                    }
+
+                        IsLoaded = true;
+                    });
+                }
+                else
+                {
+                    IsLoaded = true;
                 }
             }
             else
@@ -201,11 +242,13 @@ namespace wpf_animatedimage.Controls
 
         public AnimetedImageInfos GetInfos()
         {
+            System.Threading.SpinWait.SpinUntil(() => IsLoaded, -1);
+
             AnimetedImageInfos animetedImageInfos = new AnimetedImageInfos();
 
-            if (Source is string FileName)
+            if (FileName != null && FileName != string.Empty)
             {
-                FileInfo info = new FileInfo((string)FileName);
+                FileInfo info = new FileInfo(FileName);
 
                 animetedImageInfos.Name = info.Name;
                 animetedImageInfos.Size = info.Length;
@@ -298,7 +341,14 @@ namespace wpf_animatedimage.Controls
                         bitmapImage = new BitmapImage();
                         bitmapImage.BeginInit();
                         bitmapImage.StreamSource = stream;
-                        bitmapImage.DecodePixelWidth = (int)this.ActualWidth;
+                        if (DecodePixelWidth != 0)
+                        {
+                            bitmapImage.DecodePixelWidth = DecodePixelWidth;
+                        }
+                        else
+                        {
+                            bitmapImage.DecodePixelWidth = (int)this.ActualWidth;
+                        }
                         bitmapImage.EndInit();
 
                         base.Source = bitmapImage;
@@ -326,6 +376,8 @@ namespace wpf_animatedimage.Controls
 
         private void Image_Unloaded(object sender, RoutedEventArgs e)
         {
+            IsLoaded = false;
+
             HasError = false;
             Delay = 0;
             ActualFrame = 0;
