@@ -45,6 +45,7 @@ namespace wpf_animatedimage.Controls
         public bool IsLoaded = false;
 
 
+        #region Properties
         public bool UseBitmapImage
         {
             get { return (bool)GetValue(UseBitmapImageProperty); }
@@ -56,6 +57,20 @@ namespace wpf_animatedimage.Controls
             typeof(bool),
             typeof(AnimatedImage),
             new PropertyMetadata(true));
+
+
+        public bool UseAnimated
+        {
+            get { return (bool)GetValue(UseAnimatedProperty); }
+            set { SetValue(UseAnimatedProperty, value); }
+        }
+
+        public static readonly DependencyProperty UseAnimatedProperty = DependencyProperty.Register(
+            nameof(UseAnimated),
+            typeof(bool),
+            typeof(AnimatedImage),
+            new PropertyMetadata(false));
+
 
         public int DecodePixelWidth
         {
@@ -81,6 +96,7 @@ namespace wpf_animatedimage.Controls
             typeof(object),
             typeof(AnimatedImage),
             new PropertyMetadata(null, SourceChanged));
+        #endregion
 
 
         public AnimatedImage()
@@ -116,16 +132,38 @@ namespace wpf_animatedimage.Controls
 
                 try
                 {
-                    BitmapImage bitmapImage = new BitmapImage(new Uri((string)NewSource));
-                    if (DecodePixelWidth != 0)
-                    {
-                        bitmapImage.DecodePixelWidth = DecodePixelWidth;
-                    }
-                    else
-                    {
-                        bitmapImage.DecodePixelWidth = (int)this.ActualWidth;
-                    }
+                    //BitmapImage bitmapImage = new BitmapImage(new Uri((string)NewSource));
+                    //if (DecodePixelWidth != 0)
+                    //{
+                    //    bitmapImage.DecodePixelWidth = DecodePixelWidth;
+                    //}
+                    //else
+                    //{
+                    //    bitmapImage.DecodePixelWidth = (int)this.ActualWidth;
+                    //}
 
+                    int DecodePixelWidth = this.DecodePixelWidth;
+                    BitmapImage bitmapImage = await Task.Factory.StartNew(() =>
+                    {
+                        if (NewSource is string str)
+                        {
+                            BitmapImage image = new BitmapImage(new Uri((string)NewSource));
+                            if (DecodePixelWidth != 0)
+                            {
+                                image.DecodePixelWidth = DecodePixelWidth;
+                            }
+                            else
+                            {
+                                image.DecodePixelWidth = (int)this.ActualWidth;
+                            }
+                            image.Freeze();
+                            return image;
+                        }
+                        else
+                        {
+                            return null;
+                        }
+                    });
                     base.Source = bitmapImage;
                 }
                 catch (Exception ex)
@@ -150,18 +188,21 @@ namespace wpf_animatedimage.Controls
 
                                 this.Dispatcher.BeginInvoke((Action)delegate
                                 {
-                                    Timer = new DispatcherTimer(DispatcherPriority.Render);
-                                    if (Delay > 0)
+                                    if (UseAnimated)
                                     {
-                                        Timer.Interval = TimeSpan.FromMilliseconds(Delay);
-                                    }
-                                    else
-                                    {
-                                        Timer.Interval = TimeSpan.FromMilliseconds(DelayDefault);
-                                    }
+                                        Timer = new DispatcherTimer(DispatcherPriority.Render);
+                                        if (Delay > 0)
+                                        {
+                                            Timer.Interval = TimeSpan.FromMilliseconds(Delay);
+                                        }
+                                        else
+                                        {
+                                            Timer.Interval = TimeSpan.FromMilliseconds(DelayDefault);
+                                        }
 
-                                    Timer.Tick += TimerTickAPng;
-                                    Timer.Start();
+                                        Timer.Tick += TimerTickAPng;
+                                        Timer.Start();
+                                    }
                                 });
                             }
                             else
@@ -193,10 +234,13 @@ namespace wpf_animatedimage.Controls
 
                             this.Dispatcher.BeginInvoke((Action)delegate
                             {
-                                Timer = new DispatcherTimer(DispatcherPriority.Render);
-                                Timer.Interval = TimeSpan.FromMilliseconds(webPAnim.FramesDuration());
-                                Timer.Tick += TimerTickWebp;
-                                Timer.Start();
+                                if (UseAnimated)
+                                {
+                                    Timer = new DispatcherTimer(DispatcherPriority.Render);
+                                    Timer.Interval = TimeSpan.FromMilliseconds(webPAnim.FramesDuration());
+                                    Timer.Tick += TimerTickWebp;
+                                    Timer.Start();
+                                }
                             });
                         }
                         else
@@ -282,7 +326,9 @@ namespace wpf_animatedimage.Controls
                 {
                     stream = webPAnim.GetFrameStream(ActualFrame);
 
+#if DEBUG
                     System.Diagnostics.Debug.WriteLine(DateTime.Now.Ticks / (decimal)TimeSpan.TicksPerMillisecond);//30ms
+#endif
 
                     bitmapImage = new BitmapImage();
                     bitmapImage.BeginInit();
@@ -327,7 +373,7 @@ namespace wpf_animatedimage.Controls
             }
         }
 
-        private void TimerTickAPng(object sender, EventArgs e)
+        private async void TimerTickAPng(object sender, EventArgs e)
         {
             try
             {
@@ -337,19 +383,38 @@ namespace wpf_animatedimage.Controls
                     {
                         stream = m_Apng.ElementAt(ActualFrame).Value;
                         stream.Position = 0;
-                        
-                        bitmapImage = new BitmapImage();
-                        bitmapImage.BeginInit();
-                        bitmapImage.StreamSource = stream;
-                        if (DecodePixelWidth != 0)
+
+                        //bitmapImage = new BitmapImage();
+                        //bitmapImage.BeginInit();
+                        //bitmapImage.StreamSource = stream;
+                        //if (DecodePixelWidth != 0)
+                        //{
+                        //    bitmapImage.DecodePixelWidth = DecodePixelWidth;
+                        //}
+                        //else
+                        //{
+                        //    bitmapImage.DecodePixelWidth = (int)this.ActualWidth;
+                        //}
+                        //bitmapImage.EndInit();
+
+                        int DecodePixelWidth = this.DecodePixelWidth;
+
+                        bitmapImage = await Task.Factory.StartNew(() =>
                         {
-                            bitmapImage.DecodePixelWidth = DecodePixelWidth;
-                        }
-                        else
-                        {
-                            bitmapImage.DecodePixelWidth = (int)this.ActualWidth;
-                        }
-                        bitmapImage.EndInit();
+                            BitmapImage image = new BitmapImage();
+                            image.BeginInit();
+                            image.StreamSource = stream;
+                            if (DecodePixelWidth != 0)
+                            {
+                                image.DecodePixelWidth = DecodePixelWidth;
+                            }
+                            else
+                            {
+                                image.DecodePixelWidth = (int)this.ActualWidth;
+                            }
+                            image.EndInit();
+                            return image;
+                        });
 
                         base.Source = bitmapImage;
                     }
