@@ -132,32 +132,34 @@ namespace wpf_animatedimage.Controls
 
                 try
                 {
-                    //BitmapImage bitmapImage = new BitmapImage(new Uri((string)NewSource));
-                    //if (DecodePixelWidth != 0)
-                    //{
-                    //    bitmapImage.DecodePixelWidth = DecodePixelWidth;
-                    //}
-                    //else
-                    //{
-                    //    bitmapImage.DecodePixelWidth = (int)this.ActualWidth;
-                    //}
-
                     int DecodePixelWidth = this.DecodePixelWidth;
                     BitmapImage bitmapImage = await Task.Factory.StartNew(() =>
                     {
                         if (NewSource is string str)
                         {
-                            BitmapImage image = new BitmapImage(new Uri((string)NewSource));
-                            if (DecodePixelWidth != 0)
+                            using (var fStream = OpenReadFileStreamSafe((string)NewSource))
                             {
-                                image.DecodePixelWidth = DecodePixelWidth;
+                                fStream.Seek(0, SeekOrigin.Begin);
+                                var image = new BitmapImage();
+                                image.BeginInit();
+                                image.StreamSource = fStream;
+
+                                if (DecodePixelWidth != 0)
+                                {
+                                    image.DecodePixelWidth = DecodePixelWidth;
+                                }
+                                else
+                                {
+                                    image.DecodePixelWidth = (int)this.ActualWidth;
+                                }
+
+                                image.CacheOption = BitmapCacheOption.OnLoad;
+                                image.CreateOptions = BitmapCreateOptions.IgnoreColorProfile;
+                                image.EndInit();
+                                image.Freeze();
+
+                                return image;
                             }
-                            else
-                            {
-                                image.DecodePixelWidth = (int)this.ActualWidth;
-                            }
-                            image.Freeze();
-                            return image;
                         }
                         else
                         {
@@ -171,24 +173,27 @@ namespace wpf_animatedimage.Controls
                     base.Source = null;
                 }
 
-                if (System.IO.Path.GetExtension(FileName).ToLower().IndexOf("png") > -1)
+                if (UseAnimated)
                 {
-                    CPng_Reader pngr;
-                    try
+                    if (System.IO.Path.GetExtension(FileName).ToLower().IndexOf("png") > -1)
                     {
-                        var TaskPng = Task.Run(() => 
+                        CPng_Reader pngr;
+                        try
                         {
-                            pngr = new CPng_Reader();
-                            m_Apng = pngr.Open(File.OpenRead(FileName)).SpltAPng();
+                            var TaskPng = Task.Run(() =>
+                            {
+                                pngr = new CPng_Reader();
+                                using (var fStream = OpenReadFileStreamSafe(FileName))
+                                {
+                                    m_Apng = pngr.Open(fStream).SpltAPng();
+                                }
 
                             // Animated
                             if (pngr.Chunks.Count != 0)
-                            {
-                                Delay = m_Apng.FirstOrDefault().Key.Delay_Den;
-
-                                this.Dispatcher.BeginInvoke((Action)delegate
                                 {
-                                    if (UseAnimated)
+                                    Delay = m_Apng.FirstOrDefault().Key.Delay_Den;
+
+                                    this.Dispatcher.BeginInvoke((Action)delegate
                                     {
                                         Timer = new DispatcherTimer(DispatcherPriority.Render);
                                         if (Delay > 0)
@@ -202,79 +207,76 @@ namespace wpf_animatedimage.Controls
 
                                         Timer.Tick += TimerTickAPng;
                                         Timer.Start();
-                                    }
-                                });
-                            }
-                            else
-                            {
-                                m_Apng = null;
-                            }
+                                    });
+                                }
+                                else
+                                {
+                                    m_Apng = null;
+                                }
 
+                                pngr = null;
+                                IsLoaded = true;
+                            });
+                        }
+                        catch (Exception ex)
+                        {
                             pngr = null;
-                            IsLoaded = true;
-                        });
+                            m_Apng = null;
+                        }
                     }
-                    catch (Exception ex)
+                    else if (System.IO.Path.GetExtension(FileName).ToLower().IndexOf("webp") > -1)
                     {
-                        pngr = null;
-                        m_Apng = null;
-                    }
-                }
-                else if (System.IO.Path.GetExtension(FileName).ToLower().IndexOf("webp") > -1)
-                {
-                    var TaskWebP = Task.Run(() =>
-                    {
-                        webPAnim = new WebpAnim();
-                        webPAnim.Load(FileName);
+                        var TaskWebP = Task.Run(() =>
+                        {
+                            webPAnim = new WebpAnim();
+                            webPAnim.Load(FileName);
 
                         // Animated
                         if (webPAnim.FramesDuration() != 0)
-                        {
-                            Delay = webPAnim.FramesDuration();
-
-                            this.Dispatcher.BeginInvoke((Action)delegate
                             {
-                                if (UseAnimated)
+                                Delay = webPAnim.FramesDuration();
+
+                                this.Dispatcher.BeginInvoke((Action)delegate
                                 {
                                     Timer = new DispatcherTimer(DispatcherPriority.Render);
                                     Timer.Interval = TimeSpan.FromMilliseconds(webPAnim.FramesDuration());
                                     Timer.Tick += TimerTickWebp;
                                     Timer.Start();
-                                }
-                            });
-                        }
-                        else
-                        {
-                            Stream stream = webPAnim.GetStream();
-                            if (stream != null)
-                            {
-                                BitmapImage bitmapImage = new BitmapImage();
-                                bitmapImage = new BitmapImage();
-                                bitmapImage.BeginInit();
-                                bitmapImage.StreamSource = stream;
-                                bitmapImage.DecodePixelWidth = (int)this.ActualWidth;
-                                bitmapImage.EndInit();
-
-                                this.Dispatcher.BeginInvoke((Action)delegate
-                                {
-                                    base.Source = bitmapImage;
                                 });
                             }
                             else
                             {
-                                this.Dispatcher.BeginInvoke((Action)delegate
+                                Stream stream = webPAnim.GetStream();
+                                if (stream != null)
                                 {
-                                    base.Source = null;
-                                });
-                            }
-                        }
+                                    BitmapImage bitmapImage = new BitmapImage();
+                                    bitmapImage = new BitmapImage();
+                                    bitmapImage.BeginInit();
+                                    bitmapImage.StreamSource = stream;
+                                    bitmapImage.DecodePixelWidth = (int)this.ActualWidth;
+                                    bitmapImage.EndInit();
 
+                                    this.Dispatcher.BeginInvoke((Action)delegate
+                                    {
+                                        base.Source = bitmapImage;
+                                    });
+                                }
+                                else
+                                {
+                                    this.Dispatcher.BeginInvoke((Action)delegate
+                                    {
+                                        base.Source = null;
+                                    });
+                                }
+                            }
+
+                            IsLoaded = true;
+                        });
+                    }
+                    else
+                    {
                         IsLoaded = true;
-                    });
-                }
-                else
-                {
-                    IsLoaded = true;
+                    }
                 }
             }
             else
@@ -451,8 +453,8 @@ namespace wpf_animatedimage.Controls
             if (webPAnim != null)
             {
                 webPAnim.Dispose();
+                webPAnim = null;
             }
-            webPAnim = null;
 
             if (Timer != null)
             {
@@ -465,6 +467,7 @@ namespace wpf_animatedimage.Controls
             if (stream != null)
             {
                 stream.Dispose();
+                stream = null;
             }
 
             GC.Collect();
@@ -494,6 +497,29 @@ namespace wpf_animatedimage.Controls
             }
         }
         #endregion
+
+
+
+
+
+        public Stream OpenReadFileStreamSafe(string path, int retryAttempts = 5)
+        {
+            IOException ioException = null;
+            for (int i = 0; i < retryAttempts; i++)
+            {
+                try
+                {
+                    return new FileStream(path, FileMode.Open, FileAccess.Read);
+                }
+                catch (IOException exc)
+                {
+                    ioException = exc;
+                    Task.Delay(500).Wait();
+                }
+            }
+
+            throw new IOException($"Failed to read {path}", ioException);
+        }
     }
 
 
