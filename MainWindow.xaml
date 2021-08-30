@@ -33,6 +33,8 @@
                 <RowDefinition Height="auto" />
                 <RowDefinition Height="10" />
                 <RowDefinition Height="auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="auto" />
             </Grid.RowDefinitions>
             
             <Button Height="30" Click="Button_Click" Content="Load image" Grid.Row="0" />
@@ -41,6 +43,8 @@
 
             <TextBlock Grid.Row="4" TextWrapping="Wrap"
                        Text="Using BitmapImage for WebP decrease memory usage but animation is slower." />
+
+            <Button Height="30" Click="ButtonExtract_Click" Content="Extract WebP images" Grid.Row="6" />
         </Grid>
         
 

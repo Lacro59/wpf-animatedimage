@@ -194,7 +194,7 @@ namespace wpf_animatedimage.Controls
                                 if (m_Apng != null && m_Apng.Count != 0)
                                 {
                                     Delay = m_Apng.FirstOrDefault().Key.Delay_Den;
-                                    
+
                                     this.Dispatcher.BeginInvoke((Action)delegate
                                     {
                                         Timer = new DispatcherTimer(DispatcherPriority.Render);
@@ -206,7 +206,7 @@ namespace wpf_animatedimage.Controls
                                         {
                                             Timer.Interval = TimeSpan.FromMilliseconds(DelayDefault);
                                         }
-                                    
+
                                         Timer.Tick += TimerTickAPng;
                                         Timer.Start();
                                     });
@@ -233,8 +233,8 @@ namespace wpf_animatedimage.Controls
                             webPAnim = new WebpAnim();
                             webPAnim.Load(FileName);
 
-                        // Animated
-                        if (webPAnim.FramesDuration() != 0)
+                            // Animated
+                            if (webPAnim.FramesDuration() != 0)
                             {
                                 Delay = webPAnim.FramesDuration();
 
@@ -364,7 +364,7 @@ namespace wpf_animatedimage.Controls
                 System.Diagnostics.Debug.WriteLine("-TimerTickWebp-END---------------------");
 #endif
 
-                ActualFrame++; 
+                ActualFrame++;
                 if (ActualFrame >= webPAnim.FramesCount())
                 {
                     ActualFrame = 0;
@@ -395,8 +395,8 @@ namespace wpf_animatedimage.Controls
                             stream.Position = 0;
 
                             BitmapImage img = new BitmapImage();
-                            img.BeginInit();                    
-                            img.StreamSource = stream;                        
+                            img.BeginInit();
+                            img.StreamSource = stream;
                             if (DecodePixelWidth != 0)
                             {
                                 img.DecodePixelWidth = DecodePixelWidth;

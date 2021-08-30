@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
+using System.Drawing.Imaging;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -23,6 +24,8 @@ namespace wpf_animatedimage
     /// </summary>
     public partial class MainWindow : Window
     {
+        private string FileName = string.Empty;
+
         public MainWindow()
         {
             InitializeComponent();
@@ -33,7 +36,9 @@ namespace wpf_animatedimage
             OpenFileDialog ofd = new OpenFileDialog();
             ofd.ShowDialog();
 
-            if (ofd.FileName != null && ofd.FileName != string.Empty)
+            FileName = ofd.FileName;
+
+            if (FileName != null && FileName != string.Empty)
             {
                 string fname = ofd.FileName;
                 PART_AnimatedImage.Source = fname;
@@ -55,6 +60,30 @@ namespace wpf_animatedimage
                         PART_Delay.Content = info.Delay;
                     });
                 });
+            }
+        }
+
+
+        private void ButtonExtract_Click(object sender, RoutedEventArgs e)
+        {
+            //ffmpeg -r 25 -f image2 -s 1920x620 -i "D:\Test\myImage%1d.png" -vcodec libx264 -crf 25 -pix_fmt yuv420p test.mp4
+            if (FileName != null && FileName != string.Empty)
+            {
+                if (System.IO.Path.GetExtension(FileName).ToLower().IndexOf("webp") > -1)
+                {
+                    WebpAnim webPAnim = new WebpAnim();
+                    webPAnim = new WebpAnim();
+                    webPAnim.Load(FileName);
+
+                    int ActualFrame = 0;
+                    while (ActualFrame < webPAnim.FramesCount())
+                    {
+                        System.Drawing.Image img = System.Drawing.Image.FromStream(webPAnim.GetFrameStream(ActualFrame));
+                        img.Save($"D:\\Test\\myImage{ActualFrame}.png", ImageFormat.Png);
+
+                        ActualFrame++;
+                    }
+                }
             }
         }
     }
