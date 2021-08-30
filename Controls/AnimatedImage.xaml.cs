@@ -12,6 +12,7 @@ using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
@@ -30,6 +31,7 @@ namespace wpf_animatedimage.Controls
 
         // APng
         private Dictionary<fcTL, MemoryStream> m_Apng;
+
         // WebP
         private WebpAnim webPAnim;
 
@@ -188,11 +190,11 @@ namespace wpf_animatedimage.Controls
                                     m_Apng = pngr.Open(fStream).SpltAPng();
                                 }
 
-                            // Animated
-                            if (pngr.Chunks.Count != 0)
+                                // Animated
+                                if (m_Apng != null && m_Apng.Count != 0)
                                 {
                                     Delay = m_Apng.FirstOrDefault().Key.Delay_Den;
-
+                                    
                                     this.Dispatcher.BeginInvoke((Action)delegate
                                     {
                                         Timer = new DispatcherTimer(DispatcherPriority.Render);
@@ -204,7 +206,7 @@ namespace wpf_animatedimage.Controls
                                         {
                                             Timer.Interval = TimeSpan.FromMilliseconds(DelayDefault);
                                         }
-
+                                    
                                         Timer.Tick += TimerTickAPng;
                                         Timer.Start();
                                     });
@@ -383,42 +385,34 @@ namespace wpf_animatedimage.Controls
                 {
                     try
                     {
-                        stream = m_Apng.ElementAt(ActualFrame).Value;
-                        stream.Position = 0;
-
-                        //bitmapImage = new BitmapImage();
-                        //bitmapImage.BeginInit();
-                        //bitmapImage.StreamSource = stream;
-                        //if (DecodePixelWidth != 0)
-                        //{
-                        //    bitmapImage.DecodePixelWidth = DecodePixelWidth;
-                        //}
-                        //else
-                        //{
-                        //    bitmapImage.DecodePixelWidth = (int)this.ActualWidth;
-                        //}
-                        //bitmapImage.EndInit();
-
                         int DecodePixelWidth = this.DecodePixelWidth;
 
-                        bitmapImage = await Task.Factory.StartNew(() =>
+                        fcTL fctl = this.m_Apng.ElementAt(ActualFrame).Key;
+                        var drawingVisual = new DrawingVisual();
+                        using (DrawingContext dc = drawingVisual.RenderOpen())
                         {
-                            BitmapImage image = new BitmapImage();
-                            image.BeginInit();
-                            image.StreamSource = stream;
+                            stream = m_Apng.ElementAt(ActualFrame).Value;
+                            stream.Position = 0;
+
+                            BitmapImage img = new BitmapImage();
+                            img.BeginInit();                    
+                            img.StreamSource = stream;                        
                             if (DecodePixelWidth != 0)
                             {
-                                image.DecodePixelWidth = DecodePixelWidth;
+                                img.DecodePixelWidth = DecodePixelWidth;
                             }
                             else
                             {
-                                image.DecodePixelWidth = (int)this.ActualWidth;
+                                img.DecodePixelWidth = (int)this.ActualWidth;
                             }
-                            image.EndInit();
-                            return image;
-                        });
-
-                        base.Source = bitmapImage;
+                            img.EndInit();
+                            img.Freeze();
+                            dc.DrawRectangle(Brushes.Transparent, null, new Rect(0, 0, img.Width, img.Height));
+                            dc.DrawImage(img, new Rect(fctl.X_Offset, fctl.Y_Offset, img.Width, img.Height));
+                        }
+                        RenderTargetBitmap rtb = new RenderTargetBitmap((int)drawingVisual.ContentBounds.Width, (int)drawingVisual.ContentBounds.Height, 96, 96, PixelFormats.Pbgra32);
+                        rtb.Render(drawingVisual);
+                        base.Source = rtb;
                     }
                     catch (Exception ex)
                     {
@@ -426,7 +420,7 @@ namespace wpf_animatedimage.Controls
                     }
 
                     ActualFrame++;
-                    if (ActualFrame >= m_Apng.Count)
+                    if (ActualFrame >= this.m_Apng.Count)
                     {
                         ActualFrame = 0;
                     }
