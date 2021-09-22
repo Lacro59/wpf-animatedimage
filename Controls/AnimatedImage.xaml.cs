@@ -246,31 +246,6 @@ namespace wpf_animatedimage.Controls
                                     Timer.Start();
                                 });
                             }
-                            else
-                            {
-                                Stream stream = webPAnim.GetStream();
-                                if (stream != null)
-                                {
-                                    BitmapImage bitmapImage = new BitmapImage();
-                                    bitmapImage = new BitmapImage();
-                                    bitmapImage.BeginInit();
-                                    bitmapImage.StreamSource = stream;
-                                    bitmapImage.DecodePixelWidth = (int)this.ActualWidth;
-                                    bitmapImage.EndInit();
-
-                                    this.Dispatcher.BeginInvoke((Action)delegate
-                                    {
-                                        base.Source = bitmapImage;
-                                    });
-                                }
-                                else
-                                {
-                                    this.Dispatcher.BeginInvoke((Action)delegate
-                                    {
-                                        base.Source = null;
-                                    });
-                                }
-                            }
 
                             IsLoaded = true;
                         });
