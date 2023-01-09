@@ -25,26 +25,26 @@ namespace wpf_animatedimage.Controls
     /// </summary>
     public partial class AnimatedImage : Image
     {
-        public bool HasError = false;
+        public bool HasError { get; set; } = false;
 
-        private string FileName;
+        private string FileName { get; set; }
 
         // APng
-        private Dictionary<fcTL, MemoryStream> m_Apng;
+        private Dictionary<fcTL, MemoryStream> m_Apng { get; set; }
 
         // WebP
-        private WebpAnim webPAnim;
+        private WebpAnim webPAnim { get; set; }
 
-        private Stream stream;
-        private BitmapSource bitmapSource;
-        private BitmapImage bitmapImage;
+        private Stream stream { get; set; }
+        private BitmapSource bitmapSource { get; set; }
+        private BitmapImage bitmapImage { get; set; }
 
-        private DispatcherTimer Timer;
-        private int DelayDefault = 50;
-        private int Delay = 0;
-        private int ActualFrame = 0;
+        private DispatcherTimer Timer { get; set; }
+        private int DelayDefault { get; set; } = 50;
+        private int Delay { get; set; } = 0;
+        private int ActualFrame { get; set; } = 0;
 
-        public bool IsLoaded = false;
+        public bool IsCharged { get; set; } = false;
 
 
         #region Properties
@@ -170,7 +170,7 @@ namespace wpf_animatedimage.Controls
                     });
                     base.Source = bitmapImage;
                 }
-                catch (Exception ex)
+                catch 
                 {
                     base.Source = null;
                 }
@@ -217,10 +217,10 @@ namespace wpf_animatedimage.Controls
                                 }
 
                                 pngr = null;
-                                IsLoaded = true;
+                                IsCharged = true;
                             });
                         }
-                        catch (Exception ex)
+                        catch 
                         {
                             pngr = null;
                             m_Apng = null;
@@ -247,12 +247,12 @@ namespace wpf_animatedimage.Controls
                                 });
                             }
 
-                            IsLoaded = true;
+                            IsCharged = true;
                         });
                     }
                     else
                     {
-                        IsLoaded = true;
+                        IsCharged = true;
                     }
                 }
             }
@@ -265,7 +265,7 @@ namespace wpf_animatedimage.Controls
 
         public AnimetedImageInfos GetInfos()
         {
-            System.Threading.SpinWait.SpinUntil(() => IsLoaded, -1);
+            System.Threading.SpinWait.SpinUntil(() => IsCharged, -1);
 
             AnimetedImageInfos animetedImageInfos = new AnimetedImageInfos();
 
@@ -345,7 +345,7 @@ namespace wpf_animatedimage.Controls
                     ActualFrame = 0;
                 }
             }
-            catch (Exception ex)
+            catch
             {
                 HasError = true;
                 Timer.Stop();
@@ -389,7 +389,7 @@ namespace wpf_animatedimage.Controls
                         rtb.Render(drawingVisual);
                         base.Source = rtb;
                     }
-                    catch (Exception ex)
+                    catch
                     {
                         base.Source = null;
                     }
@@ -401,7 +401,7 @@ namespace wpf_animatedimage.Controls
                     }
                 }
             }
-            catch (Exception ex)
+            catch 
             {
                 HasError = true;
                 Timer.Stop();
@@ -412,7 +412,7 @@ namespace wpf_animatedimage.Controls
 
         private void Image_Unloaded(object sender, RoutedEventArgs e)
         {
-            IsLoaded = false;
+            IsCharged = false;
 
             HasError = false;
             Delay = 0;

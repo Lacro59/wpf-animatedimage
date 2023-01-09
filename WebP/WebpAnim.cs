@@ -90,7 +90,7 @@ namespace wpf_animatedimage
 
                 bool IsVp8 = false;
                 bool IsAnmf = false;
-                bool IsAlpf = false;
+                //bool IsAlpf = false;
 
                 WebpInfo webpInfo = null;
 
@@ -151,7 +151,7 @@ namespace wpf_animatedimage
 
                         IsVp8 = false;
                         IsAnmf = true;
-                        IsAlpf = false;
+                        //IsAlpf = false;
                     }
 
                     if (IsAnmf)
@@ -205,7 +205,7 @@ namespace wpf_animatedimage
 
                         IsVp8 = true;
                         IsAnmf = false;
-                        IsAlpf = false;
+                        //IsAlpf = false;
                     }
 
                     if (IsVp8)
@@ -255,13 +255,12 @@ namespace wpf_animatedimage
 
                         IsVp8 = false;
                         IsAnmf = false;
-                        IsAlpf = true;
+                        //IsAlpf = true;
                     }
                 }
             }
-            catch (Exception ex)
+            catch
             {
-
             }
 
             return GetWebpInfo;
