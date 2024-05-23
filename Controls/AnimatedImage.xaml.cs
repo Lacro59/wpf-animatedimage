@@ -1,4 +1,4 @@
-﻿using APNG;
+﻿using QSoft.Apng;
 using System;
 using System.Collections.Generic;
 using System.Drawing.Imaging;
@@ -179,12 +179,12 @@ namespace wpf_animatedimage.Controls
                 {
                     if (System.IO.Path.GetExtension(FileName).ToLower().IndexOf("png") > -1)
                     {
-                        CPng_Reader pngr;
+                        Png_Reader pngr;
                         try
                         {
-                            var TaskPng = Task.Run(() =>
+                            _ = Task.Run(() =>
                             {
-                                pngr = new CPng_Reader();
+                                pngr = new Png_Reader();
                                 using (var fStream = OpenReadFileStreamSafe(FileName))
                                 {
                                     m_Apng = pngr.Open(fStream).SpltAPng();
