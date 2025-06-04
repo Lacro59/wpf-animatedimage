@@ -21,13 +21,14 @@
         </Grid.RowDefinitions>
 
         <controls:AnimatedImage x:Name="PART_AnimatedImage" 
-                                UseAnimated="True"
+                                UseAnimated="{Binding ElementName=PART_ToggleAnimated, Path=IsChecked}"
                                 UseBitmapImage="{Binding ElementName=PART_Toggle, Path=IsChecked}" 
-                                DecodePixelWidth="{Binding RelativeSource={RelativeSource Self}, Path=ActualWidth}"
                                 Grid.Column="0" Grid.Row="0" Grid.RowSpan="3" />
 
         <Grid Grid.Column="2" Grid.Row="0">
             <Grid.RowDefinitions>
+                <RowDefinition Height="auto" />
+                <RowDefinition Height="10" />
                 <RowDefinition Height="auto" />
                 <RowDefinition Height="10" />
                 <RowDefinition Height="auto" />
@@ -40,11 +41,14 @@
             <Button Height="30" Click="Button_Click" Content="Load image" Grid.Row="0" />
             <ToggleButton IsChecked="True" Height="30" Name="PART_Toggle"
                           Content="Use BitmapImage for WebP" Grid.Row="2" />
+            
+            <ToggleButton IsChecked="False" Height="30" Name="PART_ToggleAnimated"
+                          Content="Use animation" Grid.Row="4" />
 
-            <TextBlock Grid.Row="4" TextWrapping="Wrap"
+            <TextBlock Grid.Row="6" TextWrapping="Wrap"
                        Text="Using BitmapImage for WebP decrease memory usage but animation is slower." />
 
-            <Button Height="30" Click="ButtonExtract_Click" Content="Extract WebP images" Grid.Row="6" />
+            <Button Height="30" Click="ButtonExtract_Click" Content="Extract WebP images" Grid.Row="8" />
         </Grid>
         
 

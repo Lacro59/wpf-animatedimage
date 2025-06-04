@@ -1,65 +1,46 @@
 ﻿using QSoft.Apng;
 using System;
 using System.Collections.Generic;
-using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 using System.Windows.Threading;
 
 namespace wpf_animatedimage.Controls
 {
-    /// <summary>
-    /// Logique d'interaction pour AnimatedImage.xaml
-    /// </summary>
     public partial class AnimatedImage : Image
     {
-        public bool HasError { get; set; } = false;
+        // Public state flags
+        public bool HasError { get; private set; } = false;
+        public bool IsLoadedCompletely { get; private set; } = false;
 
-        private string FileName { get; set; }
+        // Private fields
+        private string _filePath;
+        private Dictionary<fcTL, MemoryStream> _apngFrames;
+        private WebpAnim _webpAnim;
+        private DispatcherTimer _frameTimer;
+        private int _frameIndex;
+        private int _frameDelayMs = 50; // Default frame delay
 
-        // APng
-        private Dictionary<fcTL, MemoryStream> Apng { get; set; }
+        // Dependency Properties
+        public static readonly DependencyProperty UseBitmapImageProperty = DependencyProperty.Register(
+            nameof(UseBitmapImage), typeof(bool), typeof(AnimatedImage), new PropertyMetadata(true));
 
-        // WebP
-        private WebpAnim WebPAnim { get; set; }
+        public static readonly DependencyProperty UseAnimatedProperty = DependencyProperty.Register(
+            nameof(UseAnimated), typeof(bool), typeof(AnimatedImage), new PropertyMetadata(false));
 
-        private Stream Stream { get; set; }
-        private BitmapSource BitmapSource { get; set; }
-        private BitmapImage BitmapImage { get; set; }
+        public static new readonly DependencyProperty SourceProperty = DependencyProperty.Register(
+            nameof(Source), typeof(object), typeof(AnimatedImage), new PropertyMetadata(null, OnSourceChanged));
 
-        private DispatcherTimer Timer { get; set; }
-        private int DelayDefault { get; set; } = 50;
-        private int Delay { get; set; } = 0;
-        private int ActualFrame { get; set; } = 0;
-
-        public bool IsCharged { get; set; } = false;
-
-
-        #region Properties
         public bool UseBitmapImage
         {
             get => (bool)GetValue(UseBitmapImageProperty);
             set => SetValue(UseBitmapImageProperty, value);
         }
-
-        public static readonly DependencyProperty UseBitmapImageProperty = DependencyProperty.Register(
-            nameof(UseBitmapImage),
-            typeof(bool),
-            typeof(AnimatedImage),
-            new PropertyMetadata(true));
-
 
         public bool UseAnimated
         {
@@ -67,389 +48,268 @@ namespace wpf_animatedimage.Controls
             set => SetValue(UseAnimatedProperty, value);
         }
 
-        public static readonly DependencyProperty UseAnimatedProperty = DependencyProperty.Register(
-            nameof(UseAnimated),
-            typeof(bool),
-            typeof(AnimatedImage),
-            new PropertyMetadata(false));
-
-
         public new object Source
         {
             get => GetValue(SourceProperty);
             set => SetValue(SourceProperty, value);
         }
 
-        public static new readonly DependencyProperty SourceProperty = DependencyProperty.Register(
-            nameof(Source),
-            typeof(object),
-            typeof(AnimatedImage),
-            new PropertyMetadata(null, SourceChanged));
-        #endregion
-
-
         public AnimatedImage()
         {
-            InitializeComponent();
+            Loaded += OnLoaded;
+            Unloaded += OnUnloaded;
         }
 
-
-        private static void SourceChanged(DependencyObject obj, DependencyPropertyChangedEventArgs args)
+        private static void OnSourceChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
-            AnimatedImage control = (AnimatedImage)obj;
-            control.LoadNewSource(args.NewValue, args.OldValue);
+            var control = (AnimatedImage)d;
+            control.LoadImageAsync(e.NewValue as string).ConfigureAwait(false);
         }
 
-        private async void LoadNewSource(object NewSource, object OldSource)
+        private async Task LoadImageAsync(string path)
         {
-            if (NewSource?.Equals(OldSource) == true)
+            Reset();
+
+            if (string.IsNullOrEmpty(path) || !File.Exists(path))
             {
                 return;
             }
 
-            Image_Unloaded(null, null);
+            _filePath = path;
 
-            if (NewSource != null && NewSource is string)
+            try
             {
-                FileName = (string)NewSource;
-
-                if (!File.Exists(FileName))
-                {
-                    base.Source = null;
-                    return;
-                }
-
-                try
-                {
-                    BitmapImage bitmapImage = await Task.Factory.StartNew(() =>
-                    {
-                        if (NewSource is string str)
-                        {
-                            using (Stream fStream = OpenReadFileStreamSafe((string)NewSource))
-                            {
-                                _ = fStream.Seek(0, SeekOrigin.Begin);
-                                BitmapImage image = new BitmapImage();
-                                image.BeginInit();
-                                image.StreamSource = fStream;
-
-                                image.CacheOption = BitmapCacheOption.OnLoad;
-                                image.CreateOptions = BitmapCreateOptions.IgnoreColorProfile;
-                                image.EndInit();
-                                image.Freeze();
-
-                                return image;
-                            }
-                        }
-                        else
-                        {
-                            return null;
-                        }
-                    });
-                    base.Source = bitmapImage;
-                }
-                catch
-                {
-                    base.Source = null;
-                }
-
                 if (UseAnimated)
                 {
-                    if (System.IO.Path.GetExtension(FileName).ToLower().IndexOf("png") > -1)
+                    string ext = Path.GetExtension(path).ToLowerInvariant();
+                    if (ext.Contains("png"))
                     {
-                        Png_Reader pngr;
-                        try
-                        {
-                            _ = Task.Run(() =>
-                            {
-                                pngr = new Png_Reader();
-                                using (Stream fStream = OpenReadFileStreamSafe(FileName))
-                                {
-                                    Apng = pngr.Open(fStream).SpltAPng();
-                                }
-
-                                // Animated
-                                if (Apng != null && Apng.Count != 0)
-                                {
-                                    Delay = Apng.FirstOrDefault().Key.Delay_Den;
-
-                                    this.Dispatcher.BeginInvoke((Action)delegate
-                                    {
-                                        Timer = new DispatcherTimer(DispatcherPriority.Render);
-                                        if (Delay > 0)
-                                        {
-                                            Timer.Interval = TimeSpan.FromMilliseconds(Delay);
-                                        }
-                                        else
-                                        {
-                                            Timer.Interval = TimeSpan.FromMilliseconds(DelayDefault);
-                                        }
-
-                                        Timer.Tick += TimerTickAPng;
-                                        Timer.Start();
-                                    });
-                                }
-                                else
-                                {
-                                    Apng = null;
-                                }
-
-                                pngr = null;
-                                IsCharged = true;
-                            });
-                        }
-                        catch
-                        {
-                            pngr = null;
-                            Apng = null;
-                        }
+                        await LoadApngAsync();
                     }
-                    else if (System.IO.Path.GetExtension(FileName).ToLower().IndexOf("webp") > -1)
+                    else if (ext.Contains("webp"))
                     {
-                        _ = Task.Run(() =>
-                        {
-                            WebPAnim = new WebpAnim();
-                            WebPAnim.Load(FileName);
-
-                            // Animated
-                            if (WebPAnim.FramesDuration() != 0)
-                            {
-                                Delay = WebPAnim.FramesDuration();
-
-                                this.Dispatcher.BeginInvoke((Action)delegate
-                                {
-                                    Timer = new DispatcherTimer(DispatcherPriority.Render);
-                                    Timer.Interval = TimeSpan.FromMilliseconds(WebPAnim.FramesDuration());
-                                    Timer.Tick += TimerTickWebp;
-                                    Timer.Start();
-                                });
-                            }
-
-                            IsCharged = true;
-                        });
+                        await LoadWebpAsync();
                     }
                     else
                     {
-                        IsCharged = true;
+                        await LoadStaticImageAsync();
                     }
                 }
+                else
+                {
+                    await LoadStaticImageAsync();
+                }
             }
-            else
+            catch
             {
-                base.Source = null;
+                HasError = true;
             }
+
+            IsLoadedCompletely = true;
         }
 
-
-        public AnimetedImageInfos GetInfos()
+        private async Task LoadStaticImageAsync()
         {
-            _ = System.Threading.SpinWait.SpinUntil(() => IsCharged, -1);
-
-            AnimetedImageInfos animetedImageInfos = new AnimetedImageInfos();
-
-            if (FileName != null && FileName != string.Empty)
+            await Task.Run(() =>
             {
-                FileInfo info = new FileInfo(FileName);
-
-                animetedImageInfos.Name = info.Name;
-                animetedImageInfos.Size = info.Length;
-
-                if (WebPAnim != null)
+                using (var fs = OpenSafeStream(_filePath))
                 {
-                    animetedImageInfos.Frames = WebPAnim.FramesCount();
-                    animetedImageInfos.Delay = Delay;
-                }
-                if (Apng != null)
-                {
-                    animetedImageInfos.Frames = Apng.Count;
-                    animetedImageInfos.Delay = Delay;
-                }
-            }
+                    var bitmap = new BitmapImage();
+                    bitmap.BeginInit();
+                    bitmap.CacheOption = BitmapCacheOption.OnLoad;
+                    bitmap.CreateOptions = BitmapCreateOptions.IgnoreColorProfile;
+                    bitmap.StreamSource = fs;
+                    bitmap.EndInit();
+                    bitmap.Freeze();
 
-            return animetedImageInfos;
+                    Dispatcher.Invoke(() => base.Source = bitmap);
+                }
+            });
         }
 
+        private async Task LoadApngAsync()
+        {
+            await Task.Run(() =>
+            {
+                var reader = new Png_Reader();
+                using (var stream = OpenSafeStream(_filePath))
+                {
+                    _apngFrames = reader.Open(stream).SpltAPng();
+                }
 
-        #region Timer
+                if (_apngFrames?.Count > 0)
+                {
+                    _frameDelayMs = _apngFrames.First().Key.Delay_Den;
+                    SetupTimer(TimerTickApng);
+                }
+            });
+        }
+
+        private async Task LoadWebpAsync()
+        {
+            await Task.Run(() =>
+            {
+                _webpAnim = new WebpAnim();
+                _webpAnim.Load(_filePath);
+
+                _frameDelayMs = _webpAnim.FramesDuration();
+                if (_frameDelayMs > 0)
+                {
+                    SetupTimer(TimerTickWebp);
+                }
+            });
+        }
+
+        private void SetupTimer(EventHandler tickHandler)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                _frameTimer = new DispatcherTimer(DispatcherPriority.Render);
+                _frameTimer.Interval = TimeSpan.FromMilliseconds(_frameDelayMs);
+                _frameTimer.Tick += tickHandler;
+                _frameTimer.Start();
+            });
+        }
+
+        private void TimerTickApng(object sender, EventArgs e)
+        {
+            try
+            {
+                if (_apngFrames == null || _apngFrames.Count == 0)
+                {
+                    return;
+                }
+
+                var frame = _apngFrames.ElementAt(_frameIndex);
+                using (var stream = frame.Value)
+                {
+                    stream.Position = 0;
+
+                    var img = new BitmapImage();
+                    img.BeginInit();
+                    img.StreamSource = stream;
+                    img.EndInit();
+                    img.Freeze();
+
+                    var visual = new DrawingVisual();
+                    using (var dc = visual.RenderOpen())
+                    {
+                        dc.DrawRectangle(Brushes.Transparent, null, new Rect(0, 0, img.Width, img.Height));
+                        dc.DrawImage(img, new Rect(frame.Key.X_Offset, frame.Key.Y_Offset, img.Width, img.Height));
+                    }
+
+                    var rtb = new RenderTargetBitmap((int)img.Width, (int)img.Height, 96, 96, PixelFormats.Pbgra32);
+                    rtb.Render(visual);
+                    base.Source = rtb;
+                }
+
+                _frameIndex = (_frameIndex + 1) % _apngFrames.Count;
+            }
+            catch
+            {
+                StopTimer();
+                HasError = true;
+            }
+        }
+
         private void TimerTickWebp(object sender, EventArgs e)
         {
             try
             {
-#if DEBUG
-                System.Diagnostics.Debug.WriteLine("-TimerTickWebp-------------------------");
-                System.Diagnostics.Debug.WriteLine(DateTime.Now.Ticks / (decimal)TimeSpan.TicksPerMillisecond);
-#endif
-                if (UseBitmapImage)
+                if (_webpAnim == null)
                 {
-                    Stream = WebPAnim.GetFrameStream(ActualFrame);
-
-#if DEBUG
-                    System.Diagnostics.Debug.WriteLine(DateTime.Now.Ticks / (decimal)TimeSpan.TicksPerMillisecond);//30ms
-#endif
-
-                    BitmapImage = new BitmapImage();
-                    BitmapImage.BeginInit();
-                    BitmapImage.StreamSource = Stream;
-                    BitmapImage.EndInit();
-
-                    base.Source = BitmapImage;
+                    return;
                 }
-                else
-                {
-                    BitmapSource = WebPAnim.GetFrameBitmapSource(ActualFrame);
 
-#if DEBUG
-                    System.Diagnostics.Debug.WriteLine(DateTime.Now.Ticks / (decimal)TimeSpan.TicksPerMillisecond);//3ms
-#endif
+                BitmapSource frame = UseBitmapImage ? GetWebpFrameImage() : _webpAnim.GetFrameBitmapSource(_frameIndex);
+                base.Source = frame;
 
-                    base.Source = BitmapSource;
-                }
-#if DEBUG
-                System.Diagnostics.Debug.WriteLine(DateTime.Now.Ticks / (decimal)TimeSpan.TicksPerMillisecond);//1ms
-                System.Diagnostics.Debug.WriteLine("-TimerTickWebp-END---------------------");
-#endif
-
-                ActualFrame++;
-                if (ActualFrame >= WebPAnim.FramesCount())
-                {
-                    ActualFrame = 0;
-                }
+                _frameIndex = (_frameIndex + 1) % _webpAnim.FramesCount();
             }
             catch
             {
+                StopTimer();
                 HasError = true;
-                Timer.Stop();
             }
         }
 
-        private async void TimerTickAPng(object sender, EventArgs e)
+        private BitmapImage GetWebpFrameImage()
         {
-            try
+            using (var stream = _webpAnim.GetFrameStream(_frameIndex))
             {
-                if (Apng != null)
-                {
-                    try
-                    {
-                        fcTL fctl = this.Apng.ElementAt(ActualFrame).Key;
-                        DrawingVisual drawingVisual = new DrawingVisual();
-                        using (DrawingContext dc = drawingVisual.RenderOpen())
-                        {
-                            Stream = Apng.ElementAt(ActualFrame).Value;
-                            Stream.Position = 0;
-
-                            BitmapImage img = new BitmapImage();
-                            img.BeginInit();
-                            img.StreamSource = Stream;
-                            img.EndInit();
-                            img.Freeze();
-                            dc.DrawRectangle(Brushes.Transparent, null, new Rect(0, 0, img.Width, img.Height));
-                            dc.DrawImage(img, new Rect(fctl.X_Offset, fctl.Y_Offset, img.Width, img.Height));
-                        }
-                        RenderTargetBitmap rtb = new RenderTargetBitmap((int)drawingVisual.ContentBounds.Width, (int)drawingVisual.ContentBounds.Height, 96, 96, PixelFormats.Pbgra32);
-                        rtb.Render(drawingVisual);
-                        base.Source = rtb;
-                    }
-                    catch
-                    {
-                        base.Source = null;
-                    }
-
-                    ActualFrame++;
-                    if (ActualFrame >= this.Apng.Count)
-                    {
-                        ActualFrame = 0;
-                    }
-                }
-            }
-            catch
-            {
-                HasError = true;
-                Timer.Stop();
+                var img = new BitmapImage();
+                img.BeginInit();
+                img.StreamSource = stream;
+                img.EndInit();
+                img.Freeze();
+                return img;
             }
         }
-        #endregion
 
-
-        private void Image_Unloaded(object sender, RoutedEventArgs e)
+        private void Reset()
         {
-            IsCharged = false;
-
+            StopTimer();
+            _apngFrames = null;
+            _webpAnim?.Dispose();
+            _webpAnim = null;
+            _frameIndex = 0;
             HasError = false;
-            Delay = 0;
-            ActualFrame = 0;
-
-            Apng = null;
-            if (WebPAnim != null)
-            {
-                WebPAnim.Dispose();
-                WebPAnim = null;
-            }
-
-            if (Timer != null)
-            {
-                Timer.Stop();
-                Timer = null;
-            }
-
-            BitmapImage = null;
-
-            if (Stream != null)
-            {
-                Stream.Dispose();
-                Stream = null;
-            }
-
-            GC.Collect();
+            IsLoadedCompletely = false;
         }
 
-
-        #region Activate/Deactivated animation
-        private void Image_Loaded(object sender, RoutedEventArgs e)
+        private void StopTimer()
         {
-            Application.Current.Activated += Application_Activated;
-            Application.Current.Deactivated += Application_Deactivated;
-        }
-
-        private void Application_Deactivated(object sender, EventArgs e)
-        {
-            if (Timer != null)
+            if (_frameTimer != null)
             {
-                Timer.Stop();
+                _frameTimer.Stop();
+                _frameTimer.Tick -= TimerTickApng;
+                _frameTimer.Tick -= TimerTickWebp;
+                _frameTimer = null;
             }
         }
 
-        private void Application_Activated(object sender, EventArgs e)
+        private Stream OpenSafeStream(string path, int retries = 5)
         {
-            if (Timer != null && !HasError)
-            {
-                Timer.Start();
-            }
-        }
-        #endregion
-
-
-
-
-
-        public Stream OpenReadFileStreamSafe(string path, int retryAttempts = 5)
-        {
-            IOException ioException = null;
-            for (int i = 0; i < retryAttempts; i++)
+            for (int i = 0; i < retries; i++)
             {
                 try
                 {
-                    return new FileStream(path, FileMode.Open, FileAccess.Read);
+                    return new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
                 }
-                catch (IOException exc)
+                catch (IOException)
                 {
-                    ioException = exc;
-                    Task.Delay(500).Wait();
+                    Task.Delay(200).Wait();
                 }
             }
+            throw new IOException($"Unable to open file stream for {path}");
+        }
 
-            throw new IOException($"Failed to read {path}", ioException);
+        private void OnLoaded(object sender, RoutedEventArgs e)
+        {
+            Application.Current.Activated += OnAppActivated;
+            Application.Current.Deactivated += OnAppDeactivated;
+        }
+
+        private void OnUnloaded(object sender, RoutedEventArgs e)
+        {
+            Application.Current.Activated -= OnAppActivated;
+            Application.Current.Deactivated -= OnAppDeactivated;
+            Reset();
+        }
+
+        private void OnAppActivated(object sender, EventArgs e)
+        {
+            if (!HasError)
+            {
+                _frameTimer?.Start();
+            }
+        }
+
+        private void OnAppDeactivated(object sender, EventArgs e)
+        {
+            _frameTimer?.Stop();
         }
     }
-
 
     public class AnimetedImageInfos
     {

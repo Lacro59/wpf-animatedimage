@@ -107,12 +107,6 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="APNG\QAnimatedPNG\QAnimatedPNG.csproj">
-      <Project>{e45ead4e-aeaa-47a6-95be-544b59ba0bd1}</Project>
-      <Name>QAnimatedPNG</Name>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
     <Content Include="libwebp_x64.dll">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
@@ -122,6 +116,12 @@
     <Content Include="webpinfo.exe">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="APNG\QSoft.Apng\QSoft.Apng.csproj">
+      <Project>{9b5c14b0-aad8-47bb-9c8d-9f6c8d975897}</Project>
+      <Name>QSoft.Apng</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

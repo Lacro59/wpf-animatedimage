@@ -6,6 +6,5 @@
        xmlns:local="clr-namespace:wpf_animatedimage.Controls"
        mc:Ignorable="d" 
        Name="image_animatedimage"
-       Loaded="Image_Loaded"
        RenderOptions.BitmapScalingMode="Fant">
 </Image >

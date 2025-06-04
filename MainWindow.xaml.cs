@@ -48,6 +48,7 @@ namespace wpf_animatedimage
                 PART_Frames.Content = string.Empty;
                 PART_Delay.Content = string.Empty;
 
+                /*
                 Task.Run(() =>
                 {
                     var info = PART_AnimatedImage.GetInfos();
@@ -60,6 +61,7 @@ namespace wpf_animatedimage
                         PART_Delay.Content = info.Delay;
                     });
                 });
+                */
             }
         }
 
