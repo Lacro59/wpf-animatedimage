@@ -29,6 +29,7 @@ using System.Runtime.InteropServices;
 using System.Security;
 //using System.Windows.Forms;
 
+// https://github.com/JosePineiro/WebP-wrapper/blob/master/WebPTest/WebPWrapper.cs
 namespace WebPWrapper
 {
     public sealed class WebP : IDisposable
