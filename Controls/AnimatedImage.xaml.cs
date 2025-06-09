@@ -72,6 +72,7 @@ namespace wpf_animatedimage.Controls
 
             if (string.IsNullOrEmpty(path) || !File.Exists(path))
             {
+                base.Source = null;
                 return;
             }
 
