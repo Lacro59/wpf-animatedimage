@@ -1,14 +1,16 @@
 ﻿using QSoft.Apng;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
+using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
+using Image = System.Windows.Controls.Image;
 
 namespace wpf_animatedimage.Controls
 {
@@ -195,13 +197,13 @@ namespace wpf_animatedimage.Controls
                     var visual = new DrawingVisual();
                     using (var dc = visual.RenderOpen())
                     {
-                        dc.DrawRectangle(Brushes.Transparent, null, new Rect(0, 0, img.Width, img.Height));
+                        dc.DrawRectangle(System.Windows.Media.Brushes.Transparent, null, new Rect(0, 0, img.Width, img.Height));
                         dc.DrawImage(img, new Rect(frame.Key.X_Offset, frame.Key.Y_Offset, img.Width, img.Height));
                     }
 
                     var rtb = new RenderTargetBitmap((int)img.Width, (int)img.Height, 96, 96, PixelFormats.Pbgra32);
                     rtb.Render(visual);
-                    base.Source = rtb;
+                    Dispatcher.Invoke(() => base.Source = rtb);
                 }
 
                 _frameIndex = (_frameIndex + 1) % _apngFrames.Count;
@@ -222,9 +224,8 @@ namespace wpf_animatedimage.Controls
                     return;
                 }
 
-                BitmapSource frame = UseBitmapImage ? GetWebpFrameImage() : _webpAnim.GetFrameBitmapSource(_frameIndex);
-                base.Source = frame;
-
+                BitmapSource frame = UseBitmapImage ? _webpAnim.GetFrameBitmapSource(_frameIndex) : GetWebpFrameImage();
+                Dispatcher.Invoke(() => base.Source = _webpAnim.GetFrameBitmapSource(_frameIndex));
                 _frameIndex = (_frameIndex + 1) % _webpAnim.FramesCount();
             }
             catch
